@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lucky Star</title>
+
+  <!-- 只引入外部 CSS -->
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+  <div class="photo-bg" aria-hidden="true">
+    <div class="photo-bg__layer" id="bgA"></div>
+    <div class="photo-bg__layer" id="bgB"></div>
+    <div class="photo-bg__veil"></div>
+  </div>
+
+
+  <div class="bg-glow"></div>
+  <h1>✨ 折一颗幸运星给你</h1>
+  <div class="hint">点一下星星，会抽出一句话 / 一张图</div>
+
+  <button class="star-btn" id="btn" onclick="draw()">
+    <div class="star openable">
+      <div class="half left"></div>
+      <div class="half right"></div>
+      <div class="shine"></div>
+      <div class="particles" id="particles"></div>
+    </div>
+  </button>
+
+  <div class="card" id="card">
+    <div id="content"></div>
+  </div>
+
+  <div class="history">
+    <div>已抽到的幸运星（最近 5 条）：</div>
+    <ul id="hisList"></ul>
+  </div>
+
+    <!-- 全屏弹层：内容从星星位置缩放出来 -->
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+
+    <div class="modal-card" id="modalCard">
+      <button class="modal-close" id="modalClose" aria-label="close">×</button>
+      <div class="modal-content" id="modalContent"></div>
+
+      <div class="modal-foot" id="modalFoot"></div>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+  </div>
+
+  <!-- 只引入外部 JS：放在 body 最底部（很好） -->
+  <script src="/static/app.js"></script>
+</body>
+
+</html>
