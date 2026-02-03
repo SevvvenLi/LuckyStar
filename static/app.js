@@ -136,9 +136,6 @@ async function draw(){
   if(item.type === "text"){
     modalContent.innerHTML = `<div class="text">${escapeHtml(item.value)}</div>`;
     history.unshift("💛 " + item.value);
-  }else{
-    modalContent.innerHTML = `<img src="${item.value}" alt="lucky">`;
-    history.unshift("🖼️ 一张照片");
   }
 
   modalFoot.textContent = `总共 ${data.total} 颗，剩余 ${data.left} 颗`;

@@ -23,8 +23,6 @@ def build_pool(data):
     pool = []
     for msg in data.get("messages", []):
         pool.append({"type": "text", "value": msg})
-    for img in data.get("images", []):
-        pool.append({"type": "image", "value": img})
     random.shuffle(pool)
     return pool
 
@@ -58,7 +56,7 @@ def draw():
     if not pool:
         return jsonify({
             "exhausted": True,
-            "message": "你已经把我想说的都抽完了。",
+            "message": "你已经把我想说的都抽完啦，请等更新哟...!。",
             "total": total or 0,
             "left": 0
         })
