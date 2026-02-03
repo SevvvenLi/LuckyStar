@@ -31,19 +31,25 @@ def build_pool(data):
 def index():
     return render_template("index.html")
 
-
-@app.get("/api/reset")
-def reset():
-    session.pop("pool", None)
-    session.pop("total", None)
-    return jsonify({"ok": True})
-
-
-@app.get("/api/draw")
-def draw():
+@app.get("/api/content")
+def api_content():
     data = load_content()
-    pool = session.get("pool")
-    total = session.get("total")
+    messages = data.get("messages", [])
+    return jsonify({"messages": messages, "total": len(messages)})
+
+
+# @app.get("/api/reset")
+# def reset():
+#     session.pop("pool", None)
+#     session.pop("total", None)
+#     return jsonify({"ok": True})
+
+
+# @app.get("/api/draw")
+# def draw():
+#     data = load_content()
+#     pool = session.get("pool")
+#     total = session.get("total")
 
     # 第一次抽：初始化池子
     if pool is None:

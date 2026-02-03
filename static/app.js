@@ -18,6 +18,90 @@ const bgB = document.getElementById("bgB");
 
 let locked = false;
 
+// ======= localStorage 不重复抽取（适合几百条） =======
+const LS_POOL = "ls_pool_v1";
+const LS_TOTAL = "ls_total_v1";
+const LS_DRAWN = "ls_drawn_v1"; // 记录已抽过的内容
+const LS_HASH = "ls_hash_v1";
+let TOTAL = 0;
+
+function loadDrawn(){
+  try{
+    const arr = JSON.parse(localStorage.getItem(LS_DRAWN) || "[]");
+    return Array.isArray(arr) ? arr : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function saveDrawn(arr){
+  localStorage.setItem(LS_DRAWN, JSON.stringify(arr));
+}
+
+
+function simpleHash(str){
+  let h = 0;
+  for(let i=0;i<str.length;i++){
+    h = (h*31 + str.charCodeAt(i)) >>> 0;
+  }
+  return String(h);
+}
+
+function loadLocalPool(){
+  try{
+    const pool = JSON.parse(localStorage.getItem(LS_POOL) || "null");
+    const total = Number(localStorage.getItem(LS_TOTAL) || "0");
+    if(Array.isArray(pool)) return { pool, total };
+  }catch(e){}
+  return { pool: null, total: 0 };
+}
+
+function saveLocalPool(pool, total){
+  localStorage.setItem(LS_POOL, JSON.stringify(pool));
+  localStorage.setItem(LS_TOTAL, String(total));
+}
+
+async function ensurePool(){
+  const res = await fetch("/api/content");
+  const data = await res.json();
+  const messages = Array.isArray(data.messages) ? data.messages : [];
+  const totalFromServer = messages.length;
+
+  // 用全集 hash 记录版本（可选，但保留没问题）
+  const hash = simpleHash(JSON.stringify(messages));
+  localStorage.setItem(LS_HASH, hash);
+
+  // 核心：从“已抽列表”里剔除
+  const drawn = loadDrawn();
+  const drawnSet = new Set(drawn);
+
+  // 剩余池 = 全集 - 已抽
+  const pool = messages.filter(m => !drawnSet.has(m));
+
+  // 洗牌
+  for(let i=pool.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  // 持久化
+  saveLocalPool(pool, totalFromServer);
+  TOTAL = totalFromServer;
+
+  return pool;
+}
+
+
+async function resetLocalPool(){
+  localStorage.removeItem(LS_POOL);
+  localStorage.removeItem(LS_TOTAL);
+  localStorage.removeItem(LS_HASH);
+  localStorage.removeItem(LS_DRAWN); // 关键：清空已抽记录
+  return await ensurePool();
+}
+
+
+
 function escapeHtml(str){
   return String(str)
     .replaceAll("&","&amp;")
@@ -58,13 +142,14 @@ modalClose?.addEventListener("click", closeModal);
 window.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
 
 async function resetPool(){
-  await fetch("/api/reset");
+  await resetLocalPool();
   history.length = 0;
   renderHistory();
-  modalContent.innerHTML = `<div class="text">已重新开始～再折一颗吧 ✨</div>`;
+  modalContent.innerHTML = `<div class="text">已重新开始～再点击一次吧 ✨</div>`;
   modalFoot.textContent = "";
   modalActions.innerHTML = "";
 }
+
 
 function spawnParticles(intensity = 10){
   if(!particles) return;
@@ -116,30 +201,33 @@ async function draw(){
   modalFoot.textContent = "";
   modalActions.innerHTML = "";
 
-  // 3) 拉取内容
-  const res = await fetch("/api/draw");
-  const data = await res.json();
+  // 3) 确保本地池子存在
+  let pool = await ensurePool();
 
-  if(data.exhausted){
-    modalContent.innerHTML = `<div class="text">${escapeHtml(data.message || "你已经把我想说的都抽完了。")}</div>`;
-    modalFoot.textContent = `总共 ${data.total ?? "-"} 颗，剩余 ${data.left ?? "-"} 颗`;
+  if(!pool || pool.length === 0){
+    modalContent.innerHTML = `<div class="text">你已经把我想说的都抽完啦！请等待更新哟:)。</div>`;
+    modalFoot.textContent = `总共 ${TOTAL} 颗，剩余 0 颗`;
     modalActions.innerHTML = `<button id="resetBtn">重新开始</button>`;
     document.getElementById("resetBtn").onclick = resetPool;
 
-    // 斜裂后复原
     setTimeout(()=>{ star.classList.remove("open"); star.classList.add("reset"); locked=false; }, 900);
     return;
   }
 
-  const item = data.item;
+  // 抽一个（不重复）
+  const value = pool.pop();
+  saveLocalPool(pool, TOTAL);
+  const drawn = loadDrawn();
+  drawn.push(value);
+  saveDrawn(drawn);
 
-  if(item.type === "text"){
-    modalContent.innerHTML = `<div class="text">${escapeHtml(item.value)}</div>`;
-    history.unshift("💛 " + item.value);
-  }
+  // 展示内容（纯文字）
+  modalContent.innerHTML = `<div class="text">${escapeHtml(value)}</div>`;
+  history.unshift("💛 " + value);
 
-  modalFoot.textContent = `总共 ${data.total} 颗，剩余 ${data.left} 颗`;
+  modalFoot.textContent = `总共 ${TOTAL} 颗，剩余 ${pool.length} 颗`;
   renderHistory();
+
 
   // 4) 星星复原（让“裂开—释放内容—合上”更像仪式）
   setTimeout(()=>{
