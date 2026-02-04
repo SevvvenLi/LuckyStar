@@ -14,6 +14,10 @@ const modalActions = document.getElementById("modalActions");
 const particles = document.getElementById("particles");
 const bgA = document.getElementById("bgA");
 const bgB = document.getElementById("bgB");
+// ======= 每日点击次数限制 =======
+const LS_DAY = "ls_day_v1";          // 记录是哪一天
+const LS_DAY_COUNT = "ls_day_count_v1"; // 今天点了几次
+const MAX_PER_DAY = 3;               // 👈 每天最多 3 次
 
 
 let locked = false;
@@ -33,6 +37,15 @@ function loadDrawn(){
     return [];
   }
 }
+
+function getTodayKey(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+
 
 function saveDrawn(arr){
   localStorage.setItem(LS_DRAWN, JSON.stringify(arr));
@@ -189,6 +202,44 @@ async function draw(){
   if(locked) return;
   locked = true;
 
+    // ====== 每天最多点 3 次 ======
+  const today = getTodayKey();
+  const savedDay = localStorage.getItem(LS_DAY);
+  let count = Number(localStorage.getItem(LS_DAY_COUNT) || "0");
+
+  // 如果换了一天，重置次数
+  if(savedDay !== today){
+    localStorage.setItem(LS_DAY, today);
+    localStorage.setItem(LS_DAY_COUNT, "0");
+    count = 0;
+  }
+
+  // 已达到上限
+  if(count >= MAX_PER_DAY){
+    openModalFromStar();
+    modalContent.innerHTML = `
+      <div class="text">
+        今天已经打开 ${MAX_PER_DAY} 颗幸运星啦 🌙
+      </div>
+      <div style="margin-top:10px; opacity:.75; font-size:14px;">
+        明天再来叭爱宝，不能一次全看完哟。
+      </div>
+    `;
+    modalFoot.textContent = "";
+    modalActions.innerHTML = `<button id="closeBtn">好</button>`;
+    document.getElementById("closeBtn").onclick = closeModal;
+
+    // 复原星星
+    setTimeout(()=>{
+      star.classList.remove("open");
+      star.classList.add("reset");
+      locked = false;
+    }, 700);
+
+    return;
+  }
+
+
   // 1) 星星斜裂
   star.classList.remove("reset");
   star.classList.add("open");
@@ -220,6 +271,7 @@ async function draw(){
   const drawn = loadDrawn();
   drawn.push(value);
   saveDrawn(drawn);
+  localStorage.setItem(LS_DAY_COUNT, String(count + 1));
 
   // 展示内容（纯文字）
   modalContent.innerHTML = `<div class="text">${escapeHtml(value)}</div>`;

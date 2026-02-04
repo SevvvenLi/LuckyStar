@@ -37,46 +37,6 @@ def api_content():
     messages = data.get("messages", [])
     return jsonify({"messages": messages, "total": len(messages)})
 
-
-# @app.get("/api/reset")
-# def reset():
-#     session.pop("pool", None)
-#     session.pop("total", None)
-#     return jsonify({"ok": True})
-
-
-# @app.get("/api/draw")
-# def draw():
-#     data = load_content()
-#     pool = session.get("pool")
-#     total = session.get("total")
-
-    # 第一次抽：初始化池子
-    if pool is None:
-        pool = build_pool(data)
-        total = len(pool)
-        session["pool"] = pool
-        session["total"] = total
-
-    # 内容为空
-    if not pool:
-        return jsonify({
-            "exhausted": True,
-            "message": "你已经把我想说的都抽完啦，请等更新哟...!。",
-            "total": total or 0,
-            "left": 0
-        })
-
-    item = pool.pop()  # 每次少一个
-    session["pool"] = pool
-
-    return jsonify({
-        "exhausted": False,
-        "item": item,
-        "total": total,
-        "left": len(pool)
-    })
-
 @app.get("/api/photos")
 def photos():
     photos_dir = BASE_DIR / "static" / "photos"
