@@ -335,3 +335,40 @@ async function startBgSlideshow(){
 }
 
 startBgSlideshow();
+
+
+// ====== 回复发送 ======
+const replyInput = document.getElementById("replyInput");
+const replySend = document.getElementById("replySend");
+const replyTip = document.getElementById("replyTip");
+
+replySend?.addEventListener("click", async ()=>{
+  const msg = (replyInput.value || "").trim();
+  if(!msg){
+    replyTip.textContent = "先写一句再发～";
+    return;
+  }
+
+  replySend.disabled = true;
+  replyTip.textContent = "发送中…";
+
+  try{
+    const res = await fetch("/api/reply", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ message: msg })
+    });
+    const data = await res.json();
+
+    if(data.ok){
+      replyTip.textContent = "泥收到啦 💛";
+      replyInput.value = "";
+    }else{
+      replyTip.textContent = "发送失败了，再试一次好嘛";
+    }
+  }catch(e){
+    replyTip.textContent = "网络有点慢，再试一次叭";
+  }finally{
+    replySend.disabled = false;
+  }
+});

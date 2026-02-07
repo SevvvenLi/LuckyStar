@@ -472,3 +472,45 @@ body > *{
   position: relative;
   z-index: 1;
 }
+
+/* ====== 回复框 ====== */
+.replyBox{
+  width:min(520px,86vw);
+  margin-top:18px;
+}
+
+.replyTitle{
+  font-size:14px;
+  opacity:.75;
+  margin-bottom:8px;
+}
+
+.replyRow{
+  display:flex;
+  gap:10px;
+}
+
+.replyRow input{
+  flex:1;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,.12);
+  background:rgba(255,255,255,.75);
+  outline:none;
+  font-size:14px;
+}
+
+.replyRow button{
+  padding:12px 14px;
+  border-radius:12px;
+  border:none;
+  cursor:pointer;
+  background:rgba(255,255,255,.9);
+  box-shadow:0 10px 22px rgba(0,0,0,.12);
+}
+
+.replyTip{
+  margin-top:6px;
+  font-size:12px;
+  opacity:.7;
+}

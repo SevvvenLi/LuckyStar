@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LuckyStar Inbox</title>
+  <style>
+    body{
+      font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+      margin:24px;
+      background:#fff7fb;
+    }
+    h1{ margin:0 0 10px; }
+    .hint{ opacity:.6; margin-bottom:16px; }
+    .item{
+      background:white;
+      border-radius:14px;
+      padding:14px;
+      box-shadow:0 10px 30px rgba(0,0,0,.08);
+      margin-bottom:12px;
+    }
+    .time{
+      font-size:12px;
+      opacity:.6;
+      margin-bottom:6px;
+    }
+    .msg{
+      white-space:pre-wrap;
+      line-height:1.6;
+      font-size:15px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📮 收到的回复</h1>
+  <div class="hint">只有你能看到 · 每 3 秒自动刷新</div>
+  <div id="list"></div>
+
+<script>
+  const key = new URLSearchParams(location.search).get("key") || "";
+  const list = document.getElementById("list");
+
+  function esc(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;");
+  }
+
+  async function load(){
+    const res = await fetch(`/api/replies?key=${encodeURIComponent(key)}`);
+    const data = await res.json();
+    if(!data.ok){
+      list.innerHTML = "<div>加载失败</div>";
+      return;
+    }
+    list.innerHTML = data.replies.map(r=>`
+      <div class="item">
+        <div class="time">${r.created_at}</div>
+        <div class="msg">${esc(r.message)}</div>
+      </div>
+    `).join("");
+  }
+
+  load();
+  setInterval(load, 3000);
+</script>
+</body>
+</html>
