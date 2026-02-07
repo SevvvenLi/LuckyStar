@@ -4,8 +4,8 @@ from pathlib import Path
 import os
 from datetime import datetime
 
-import psycopg2
-import psycopg2.extras
+import psycopg
+from psycopg.rows import dict_row
 
 app = Flask(__name__)
 
@@ -26,28 +26,29 @@ def load_content():
 
 def get_conn():
     if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL is not set. Please add Railway PostgreSQL.")
-    # Railway/云数据库常要求 SSL。没写 sslmode 时强制 require
-    if "sslmode=" not in DATABASE_URL:
-        return psycopg2.connect(DATABASE_URL + "?sslmode=require")
-    return psycopg2.connect(DATABASE_URL)
+        raise RuntimeError("DATABASE_URL is not set")
+
+    url = DATABASE_URL
+    # Railway/云 Postgres 通常需要 SSL
+    if "sslmode=" not in url:
+        url = url + ("&" if "?" in url else "?") + "sslmode=require"
+
+    return psycopg.connect(url)
 
 
 def init_db():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS replies (
-            id SERIAL PRIMARY KEY,
-            created_at TIMESTAMPTZ NOT NULL,
-            message TEXT NOT NULL,
-            user_agent TEXT,
-            ip TEXT
-        );
-    """)
-    conn.commit()
-    cur.close()
-    conn.close()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS replies (
+                    id SERIAL PRIMARY KEY,
+                    created_at TIMESTAMPTZ NOT NULL,
+                    message TEXT NOT NULL,
+                    user_agent TEXT,
+                    ip TEXT
+                );
+            """)
+
 
 
 # 启动时建表
@@ -96,23 +97,19 @@ def api_reply():
     if len(msg) > 500:
         return jsonify({"ok": False, "error": "too_long"}), 400
 
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO replies (created_at, message, user_agent, ip) VALUES (%s, %s, %s, %s)",
-        (
-            datetime.utcnow(),
-            msg,
-            request.headers.get("User-Agent", ""),
-            request.headers.get("X-Forwarded-For", request.remote_addr) or ""
-        )
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO replies (created_at, message, user_agent, ip) VALUES (%s, %s, %s, %s)",
+                (
+                    datetime.utcnow(),
+                    msg,
+                    request.headers.get("User-Agent", ""),
+                    request.headers.get("X-Forwarded-For", request.remote_addr) or ""
+                )
+            )
 
     return jsonify({"ok": True})
-
 
 @app.get("/api/replies")
 def api_replies():
@@ -120,21 +117,21 @@ def api_replies():
     if key != INBOX_KEY:
         abort(404)
 
-    conn = get_conn()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("""
-        SELECT id,
-               to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
-               message
-        FROM replies
-        ORDER BY id DESC
-        LIMIT 200
-    """)
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+    with get_conn() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
+            cur.execute("""
+                SELECT id,
+                       to_char(created_at AT TIME ZONE 'UTC',
+                               'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS created_at,
+                       message
+                FROM replies
+                ORDER BY id DESC
+                LIMIT 200
+            """)
+            rows = cur.fetchall()
 
     return jsonify({"ok": True, "replies": rows})
+
 
 
 if __name__ == "__main__":
