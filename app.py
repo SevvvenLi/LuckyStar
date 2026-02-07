@@ -12,7 +12,7 @@ app = Flask(__name__)
 BASE_DIR = Path(__file__).parent
 CONTENT_PATH = BASE_DIR / "content.json"
 
-DATABASE_URL = os.environ.get("postgresql://postgres:HtYagLgqenDpMTGdkoNqgKrLgXHqSOhw@postgres.railway.internal:5432/railway")  # Railway Postgres 会提供
+DATABASE_URL = os.environ.get("DATABASE_URL")  # ✅ Railway 注入
 INBOX_KEY = os.environ.get("INBOX_KEY", "change-this-key")
 
 
